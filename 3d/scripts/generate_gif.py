@@ -15,8 +15,8 @@
 #   limitations under the License.
 
 
-from __future__ import division
-from __future__ import print_function
+
+
 
 import errno
 import functools
@@ -55,7 +55,7 @@ def render_rotation(input_file, output_folder, num_frames, start_frame, variable
             colorscheme = 'Nature',
         )
     pool = Pool()
-    for _ in pool.imap_unordered(render_frame, range(num_frames)):
+    for _ in pool.imap_unordered(render_frame, list(range(num_frames))):
         # Consume results as they occur so any exception is rethrown
         pass
     pool.close()

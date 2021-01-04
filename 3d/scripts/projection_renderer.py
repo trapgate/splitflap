@@ -12,9 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from __future__ import division
-from __future__ import print_function
-
 import logging
 import os
 import shutil
@@ -44,7 +41,7 @@ class Renderer(object):
          return v
 
     def _get_num_components(self):
-        stdout, stderr = openscad.run(
+        _, stderr = openscad.run(
             self.input_file,
             os.path.join(self.output_folder, 'dummy.png'),
             output_size=[1,1],
@@ -80,7 +77,7 @@ class Renderer(object):
                         capture_output=True,
                     )
             except openscad.OpenSCADException as e:
-                if b'Current top level object is not a 2D object.' in e.stderr:
+                if 'Current top level object is not a 2D object.' in e.stderr:
                     # This is expected if we try rendering an etch layer as a
                     # cut, since there will be nothing to export
                     continue

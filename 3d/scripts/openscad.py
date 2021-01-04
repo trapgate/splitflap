@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from __future__ import division
-from __future__ import print_function
 
 import logging
 import numbers
@@ -25,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 class OpenSCADException(Exception):
     def __init__(self, message, returncode, stdout=None, stderr=None):
-        truncated_stdout = '\n'.join(stdout.decode('utf-8').splitlines()[-20:]) if stdout is not None else None
-        truncated_stderr = '\n'.join(stderr.decode('utf-8').splitlines()[-20:]) if stderr is not None else None
+        truncated_stdout = '\n'.join(stdout.splitlines()[-20:]) if stdout is not None else None
+        truncated_stderr = '\n'.join(stderr.splitlines()[-20:]) if stderr is not None else None
         super(OpenSCADException, self).__init__('%s\n\nRETURN CODE:%d\n\nSTDOUT:\n%s\n\nSTDERR:\n%s' % (
             message, returncode, truncated_stdout, truncated_stderr))
         self.returncode = returncode
@@ -66,7 +64,7 @@ def run(
         command += ['--colorscheme=%s' % colorscheme]
 
     if variables is not None:
-        for k, v in variables.items():
+        for k, v in list(variables.items()):
             if isinstance(v, str) or isinstance(v, bytes):
                 try:
                     v = v.decode('utf-8')
@@ -92,7 +90,7 @@ def run(
     stdout_type = subprocess.PIPE if capture_output else None
     stderr_type = subprocess.PIPE if capture_output else None
     try:
-        proc = subprocess.Popen(command, stdout=stdout_type, stderr=stderr_type)
+        proc = subprocess.Popen(command, stdout=stdout_type, stderr=stderr_type, text=True)
         stdout, stderr = proc.communicate()
         returncode = proc.returncode
     except OSError as e:
@@ -115,7 +113,7 @@ def extract_values(stderr):
     result = {}
     pattern = re.compile(r'^ECHO: (.+) = (.+)$')
     for line in stderr.splitlines():
-        m = pattern.search(line.decode('utf-8'))
+        m = pattern.search(line)
         if m:
             result[m.group(1)] = m.group(2)
     return result

@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from __future__ import print_function
 from collections import defaultdict
 
 from svg.path import (
@@ -154,7 +153,7 @@ class SvgProcessor(object):
 
         to_remove = {}
         to_update = {}
-        for slope_intersect, lines in lines_bucketed_by_slope_intersect.items():
+        for _, lines in list(lines_bucketed_by_slope_intersect.items()):
             for i in range(20):
                 if SvgProcessor._pairwise_overlap_check(lines, to_update, to_remove):
                     print('Re-running pairwise overlap check because of updated/merged line')
@@ -326,5 +325,5 @@ class SvgProcessor(object):
 
     @staticmethod
     def _apply_attributes(node, values):
-        for (k, v) in values.items():
+        for (k, v) in list(values.items()):
             node.attributes[k] = v
