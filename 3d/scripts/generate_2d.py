@@ -50,6 +50,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--panelize', type=int, default=1, help='Quantity to panelize - must be 1 or an even number')
     parser.add_argument('--skip-optimize', action='store_true', help='Don\'t remove redundant/overlapping cut lines')
+    parser.add_argument('--process-file', type=str, help='Just process this file, don\'t regenerate')
 
     kerf_group = parser.add_mutually_exclusive_group()
     kerf_group.add_argument('--kerf', type=float, help='Override kerf_width value')
@@ -113,9 +114,12 @@ if __name__ == '__main__':
 
     print('Variables:\n' + json.dumps(extra_variables, indent=4))
 
-    renderer = Renderer(os.path.join(source_parts_dir, 'splitflap.scad'), laser_parts_directory, extra_variables)
-    renderer.clean()
-    svg_output = renderer.render_svgs(panelize_quantity=args.panelize)
+    if args.process_file is None:
+        renderer = Renderer(os.path.join(source_parts_dir, 'splitflap.scad'), laser_parts_directory, extra_variables)
+        renderer.clean()
+        svg_output = renderer.render_svgs(panelize_quantity=args.panelize)
+    else:
+        svg_output = args.process_file
 
     processor = SvgProcessor(svg_output)
 
