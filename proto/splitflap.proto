@@ -4,6 +4,29 @@ import "nanopb.proto";
 
 package PB;
 
+message Settings {
+    enum AnimationStyle {
+        LEFT_TO_RIGHT = 0;
+        RIGHT_TO_LEFT = 1;
+        CENTER_OUT = 2;
+        SIDES_IN = 3;
+        DOWN = 4;
+        UP = 5;
+    }
+
+    // force_full_rotation determines whether a module cycles through an entire
+    // rotation when its target position is not changing.
+    bool force_full_rotation = 1;
+    // max_moving controls the number of modules that are allowed to be moving
+    // simultaneously. 0 means no limit.
+    uint32 max_moving = 2 [(nanopb).int_size = IS_8];
+    // start_delay_millis is the number of milliseconds to wait after starting a
+    // module moving before starting the next one.
+    uint32 start_delay_millis = 3;
+    // animation_style determines the order in which flaps will start moving.
+    AnimationStyle animation_style = 4;
+}
+
 message SplitflapState {
     message ModuleState {
         enum State {
@@ -23,7 +46,8 @@ message SplitflapState {
         uint32 count_missed_home = 6 [(nanopb).int_size = IS_8];
     }
 
-    repeated ModuleState modules = 1 [(nanopb).max_count = 255];
+    Settings settings = 1;
+    repeated ModuleState modules = 2 [(nanopb).max_count = 255];
 }
 
 message Log {
@@ -114,7 +138,9 @@ message SplitflapConfig {
          */
         uint32 reset_nonce = 3 [(nanopb).int_size = IS_8];
     }
-    repeated ModuleConfig modules = 1 [(nanopb).max_count = 255];
+
+    Settings settings = 1;
+    repeated ModuleConfig modules = 2 [(nanopb).max_count = 255];
 }
 
 message RequestState {}

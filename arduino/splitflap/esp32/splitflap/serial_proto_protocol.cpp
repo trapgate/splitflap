@@ -82,6 +82,13 @@ void SerialProtoProtocol::loop() {
         state_requested_ = false;
         pb_tx_buffer_ = {};
         pb_tx_buffer_.which_payload = PB_FromSplitflap_splitflap_state_tag;
+        pb_tx_buffer_.payload.splitflap_state.has_settings = true;
+        pb_tx_buffer_.payload.splitflap_state.settings = {
+            .force_full_rotation = latest_state_.settings.force_full_rotation,
+            .max_moving = latest_state_.settings.max_moving,
+            .start_delay_millis = latest_state_.settings.start_delay_millis,
+            .animation_style = latest_state_.settings.animation_style,
+        };
         pb_tx_buffer_.payload.splitflap_state.modules_count = NUM_MODULES;
         for (uint8_t i = 0; i < NUM_MODULES; i++) {
             pb_tx_buffer_.payload.splitflap_state.modules[i] = {
@@ -173,7 +180,12 @@ void SerialProtoProtocol::handlePacket(const uint8_t* buffer, size_t size) {
             PB_SplitflapConfig config = pb_rx_buffer_.payload.splitflap_config;
             Command c = {};
             c.command_type = CommandType::CONFIG;
-            for (uint8_t i = 0; i < min((int)config.modules_count, NUM_MODULES); i++) {
+            c.data.module_configs.settings.force_full_rotation = config.settings.force_full_rotation;
+            c.data.module_configs.settings.max_moving = config.settings.max_moving;
+            c.data.module_configs.settings.start_delay_millis = config.settings.start_delay_millis;
+            c.data.module_configs.settings.animation_style = config.settings.animation_style;
+            c.data.module_configs.module_count = min((int)config.modules_count, NUM_MODULES);
+            for (uint8_t i = 0; i < c.data.module_configs.module_count; i++) {
                 ModuleConfig& module_config = c.data.module_configs.config[i];
                 module_config.target_flap_index = config.modules[i].target_flap_index;
                 module_config.movement_nonce = config.modules[i].movement_nonce;

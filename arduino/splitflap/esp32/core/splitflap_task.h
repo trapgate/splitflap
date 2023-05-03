@@ -18,12 +18,20 @@
 #include "config.h"
 #include "logger.h"
 #include "src/splitflap_module_data.h"
+#include "../proto_gen/splitflap.pb.h"
 
 #include "task.h"
 
 enum class SplitflapMode {
     MODE_RUN,
     MODE_SENSOR_TEST,
+};
+
+struct Settings {
+    bool force_full_rotation;
+    uint8_t max_moving;
+    uint32_t start_delay_millis;
+    PB_Settings_AnimationStyle animation_style;
 };
 
 struct SplitflapModuleState {
@@ -50,6 +58,7 @@ struct SplitflapModuleState {
 
 struct SplitflapState {
     SplitflapMode mode;
+    Settings settings;
     SplitflapModuleState modules[NUM_MODULES];
 
 #ifdef CHAINLINK
@@ -94,6 +103,8 @@ struct ModuleConfig {
 };
 
 struct ModuleConfigs {
+    Settings settings;
+    uint8_t module_count;
     ModuleConfig config[NUM_MODULES];
 };
 
@@ -104,6 +115,12 @@ struct Command {
         ModuleConfigs module_configs;
     };
     CommandData data;
+};
+
+struct Motions {
+    uint8_t target_flap_index[NUM_MODULES];
+    PB_Settings_AnimationStyle anim_style;
+    uint8_t pos;
 };
 
 #define QCMD_NO_OP          0
@@ -122,7 +139,7 @@ class SplitflapTask : public Task<SplitflapTask> {
         
         SplitflapState getState();
 
-        void showString(const char *str, uint8_t length, bool force_full_rotation = FORCE_FULL_ROTATION);
+        void showString(const char *str, uint8_t length);
         void resetAll();
         void disableAll();
         void setLed(uint8_t id, bool on);
@@ -141,9 +158,27 @@ class SplitflapTask : public Task<SplitflapTask> {
         Logger* logger_;
 
         bool all_stopped_ = true;
+        
+        uint8_t start_orders_[_PB_Settings_AnimationStyle_MAX+1][NUM_MODULES] = {
+            {}, 
+            {},
+            {5,17,6,18,4,16,7,19,3,15,8,20,2,14,9,21,1,13,10,22,0,12,11,23},
+            {0,11,12,23,1,10,13,22,2,9,14,21,3,8,15,20,4,7,16,19,5,6,17,18},
+            {0,11,1,12,2,13,3,14,4,15,5,16,6,17,7,18,8,19,9,20,10,21,11,22},
+            {23,11,22,10,21,9,20,8,19,7,18,6,17,5,16,4,15,3,14,2,13,1,12,0},
+        };
+        Settings settings_ = {
+            .force_full_rotation = FORCE_FULL_ROTATION,
+            .max_moving = 0,
+            .start_delay_millis = 0,
+            .animation_style = PB_Settings_AnimationStyle_LEFT_TO_RIGHT,
+        };
 
+        uint8_t moving_ = 0;
         uint32_t last_sensor_print_millis_ = 0;
+        uint32_t last_module_start_millis_ = 0;
         bool sensor_test_ = SENSOR_TEST;
+        Motions next_motion_ = {};
         ModuleConfigs current_configs_ = {};
 
 #ifdef CHAINLINK
@@ -158,6 +193,8 @@ class SplitflapTask : public Task<SplitflapTask> {
         void updateStateCache();
 
         void processQueue();
+        void setStartOrders();
+        void startModules();
         void runUpdate();
         void sensorTestUpdate();
         void log(const char* msg);

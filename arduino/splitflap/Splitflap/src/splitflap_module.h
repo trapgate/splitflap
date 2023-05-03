@@ -126,6 +126,7 @@ class SplitflapModule {
   uint8_t GetCurrentFlapIndex();
   uint8_t GetTargetFlapIndex();
   void GoHome();
+  bool Moving();
   void ResetErrorCounters();
   void ResetState();
   inline void Update();
@@ -392,6 +393,14 @@ inline void SplitflapModule::GoHome() {
     state = LOOK_FOR_HOME;
     delta_steps = MAX_STEPS_LOOKING_FOR_HOME;
 #endif
+}
+
+__attribute__((always_inline))
+inline bool SplitflapModule::Moving() {
+    // current_accel_step doesn't immediately increase when the display is
+    // ordered to move, which means that the count of moving flaps in the
+    // control loop can be wrong. So this method uses delta_steps instead.
+    return delta_steps > 0;
 }
 
 __attribute__((always_inline))

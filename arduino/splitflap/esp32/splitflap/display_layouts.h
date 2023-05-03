@@ -18,7 +18,7 @@
 #include <stdint.h>
 
 // Customize these settings and select a layout algorithm at the bottom if you have a different arrangement of modules:
-#define DISPLAY_COLUMNS 6
+#define DISPLAY_COLUMNS 12
 
 
 // EXAMPLE LAYOUT ALGORITHMS:
@@ -31,6 +31,12 @@ static void getLayoutPositionSingleRowZigZag(const uint8_t module_index, uint8_t
         (DISPLAY_COLUMNS - 1 - (module_index % DISPLAY_COLUMNS))
         : module_index % DISPLAY_COLUMNS;
 
+}
+
+// Extremely simple layout: two rows both chained left-to-right.
+static void getLayoutPositionSingleRow(const uint8_t module_index, uint8_t* out_row, uint8_t* out_col) {
+    *out_row = module_index / DISPLAY_COLUMNS;
+    *out_col = module_index % DISPLAY_COLUMNS;
 }
 
 
@@ -68,11 +74,10 @@ static void getLayoutPositionDualRowZigZag(const bool flip_first_rows, const uin
         : ((module_index / 2) % DISPLAY_COLUMNS);
 }
 
-
-
 static void getLayoutPosition(const uint8_t module_index, uint8_t* out_row, uint8_t* out_col) {
     // Select a layout algorithm by uncommenting, or implement your own here:
 
     // getLayoutPositionDualRowZigZag(true, module_index, out_row, out_col);
-    getLayoutPositionSingleRowZigZag(module_index, out_row, out_col);
+    // getLayoutPositionSingleRowZigZag(module_index, out_row, out_col);
+    getLayoutPositionSingleRow(module_index, out_row, out_col);
 }

@@ -6,6 +6,9 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
+PB_BIND(PB_Settings, PB_Settings, AUTO)
+
+
 PB_BIND(PB_SplitflapState, PB_SplitflapState, 4)
 
 
@@ -46,6 +49,7 @@ PB_BIND(PB_RequestState, PB_RequestState, AUTO)
 
 
 PB_BIND(PB_ToSplitflap, PB_ToSplitflap, 2)
+
 
 
 

@@ -308,7 +308,7 @@ void HTTPTask::run() {
                 size_t len = strlcpy(buf, message.c_str(), sizeof(buf));
                 memset(buf + len, ' ', sizeof(buf) - len);
 
-                splitflap_task_.showString(buf, NUM_MODULES, false);
+                splitflap_task_.showString(buf, NUM_MODULES);
             }
 
             current_message_index_++;

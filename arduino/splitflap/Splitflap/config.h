@@ -13,7 +13,7 @@
 #endif
 
 // Whether to force a full rotation when the same letter is specified again
-#define FORCE_FULL_ROTATION true
+#define FORCE_FULL_ROTATION false
 
 // Whether to use/expect a home sensor. Enable for auto-calibration via home
 // sensor feedback. Disable for basic open-loop control (useful when first

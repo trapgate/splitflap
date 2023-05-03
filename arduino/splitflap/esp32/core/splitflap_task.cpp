@@ -34,6 +34,7 @@ SplitflapTask::SplitflapTask(const uint8_t task_core, const LedMode led_mode) : 
 
   queue_ = xQueueCreate(5, sizeof(Command));
   assert(queue_ != NULL);
+  setStartOrders();
 }
 
 SplitflapTask::~SplitflapTask() {
@@ -124,6 +125,8 @@ void SplitflapTask::processQueue() {
             case CommandType::MODULES: {
                 uint8_t* data = queue_receive_buffer_.data.module_command;
                 bool any_leds = false;
+                int to_move = 0;
+                next_motion_.pos = 0;
                 for (uint8_t i = 0; i < NUM_MODULES; i++) {
                     switch (data[i]) {
                         case QCMD_NO_OP:
@@ -149,13 +152,22 @@ void SplitflapTask::processQueue() {
                             modules[i]->Disable();
                             break;
                         default:
-                            assert(data[i] >= QCMD_FLAP && data[i] < QCMD_FLAP + NUM_FLAPS);
-                            modules[i]->GoToFlapIndex(data[i] - QCMD_FLAP);
+                            uint8_t index = data[i] - QCMD_FLAP;
+                            uint8_t curr_target = modules[i]->GetTargetFlapIndex();
+                            assert(data[i] >= QCMD_FLAP && index < NUM_FLAPS);
+                            bool rotate = settings_.force_full_rotation || index != curr_target;
+                            next_motion_.target_flap_index[i] = rotate ? index : 255;
+                            if (rotate) {
+                                to_move++;
+                            }
                             break;
                     }
                 }
                 if (any_leds) {
                     motor_sensor_io();
+                }
+                if (to_move) {
+                    startModules();
                 }
                 break;
             }
@@ -167,7 +179,8 @@ void SplitflapTask::processQueue() {
                 break;
             case CommandType::CONFIG: {
                 ModuleConfigs configs = queue_receive_buffer_.data.module_configs;
-                for (uint8_t i = 0; i < NUM_MODULES; i++) {
+                settings_ = configs.settings;
+                for (uint8_t i = 0; i < configs.module_count; i++) {
                     ModuleConfig config = configs.config[i];
 
                     if (config.reset_nonce != current_configs_.config[i].reset_nonce) {
@@ -190,6 +203,44 @@ void SplitflapTask::processQueue() {
                 current_configs_ = configs;
                 break;
             }
+        }
+    }
+}
+
+void SplitflapTask::setStartOrders() {
+    const uint8_t hi = NUM_MODULES - 1;
+    // const uint8_t width = NUM_MODULES / NUM_ROWS;
+    // TODO: Build the rest of these using defined dimensions.
+    for (uint8_t x = 0; x < NUM_MODULES; x++) {
+        start_orders_[PB_Settings_AnimationStyle_LEFT_TO_RIGHT][x] = x;
+        start_orders_[PB_Settings_AnimationStyle_RIGHT_TO_LEFT][x] = hi - x;
+    }
+}
+
+void SplitflapTask::startModules() {
+    uint32_t ms = millis();
+    auto order = start_orders_[settings_.animation_style];
+    if (last_module_start_millis_ + settings_.start_delay_millis > ms) {
+        return;
+    }
+    // Start the flaps in the order determined by the current animation style.
+    for (uint8_t x = next_motion_.pos; x < NUM_MODULES; x++) {
+        if (settings_.max_moving && moving_ >= settings_.max_moving) {
+            // If we're already at the limit of moving modules, don't start.
+            break;
+        }
+        uint8_t module = order[x];
+        uint8_t target_flap = next_motion_.target_flap_index[module];
+        next_motion_.pos++;
+        if (target_flap == 255) {
+            // This flap isn't changing position.
+            continue;
+        }
+        modules[module]->GoToFlapIndex(target_flap);
+        moving_++;
+        last_module_start_millis_ = ms;
+        if (settings_.start_delay_millis > 0) {
+            return;
         }
     }
 }
@@ -218,8 +269,10 @@ void SplitflapTask::runUpdate() {
 #endif
     } else {
       all_stopped_ = true;
+      moving_ = 0;
       for (uint8_t i = 0; i < NUM_MODULES; i++) {
         modules[i]->Update();
+        moving_ += modules[i]->Moving();
         bool is_idle = modules[i]->state == PANIC
           || modules[i]->state == STATE_DISABLED
           || modules[i]->state == LOOK_FOR_HOME
@@ -240,6 +293,7 @@ void SplitflapTask::runUpdate() {
         all_stopped_ &= is_stopped;
       }
       motor_sensor_io();
+      startModules();
     }
 
 
@@ -293,10 +347,11 @@ int8_t SplitflapTask::findFlapIndex(uint8_t character) {
 void SplitflapTask::updateStateCache() {
     SplitflapState new_state;
     new_state.mode = sensor_test_ ? SplitflapMode::MODE_SENSOR_TEST : SplitflapMode::MODE_RUN;
+    new_state.settings = settings_;
     for (uint8_t i = 0; i < NUM_MODULES; i++) {
       new_state.modules[i].flap_index = modules[i]->GetCurrentFlapIndex();
       new_state.modules[i].state = modules[i]->state;
-      new_state.modules[i].moving = modules[i]->current_accel_step > 0;
+      new_state.modules[i].moving = modules[i]->Moving();
       new_state.modules[i].home_state = modules[i]->GetHomeState();
       new_state.modules[i].count_missed_home = modules[i]->count_missed_home;
       new_state.modules[i].count_unexpected_home = modules[i]->count_unexpected_home;
@@ -317,13 +372,13 @@ void SplitflapTask::log(const char* msg) {
     }
 }
 
-void SplitflapTask::showString(const char* str, uint8_t length, bool force_full_rotation) {
+void SplitflapTask::showString(const char* str, uint8_t length) {
     Command command = {};
     command.command_type = CommandType::MODULES;
     for (uint8_t i = 0; i < length; i++) {
         int8_t index = findFlapIndex(str[i]);
         if (index != -1) {
-            if (force_full_rotation || index != modules[i]->GetTargetFlapIndex()) {
+            if (settings_.force_full_rotation || index != modules[i]->GetTargetFlapIndex()) {
                 command.data.module_command[i] = QCMD_FLAP + index;
             }
         }
