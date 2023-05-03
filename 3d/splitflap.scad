@@ -85,9 +85,8 @@ spool_horizontal_explosion = lookup(spool_explosion, [
 // Remember: it's better to underestimate (looser fit) than overestimate (no fit)
 kerf_width = 0.2 - 0.02;
 
-// MDF, .120in nominal
-// https://www.ponoko.com/materials/mdf-fiberboard
-thickness = 3.0;
+// Actual proofgrade acrylic
+thickness = 3.25;
 
 etch_depth = 0.1;  // for render
 
@@ -156,17 +155,17 @@ spool_strut_inner_length = spool_width - 3 * thickness;
 
 spool_strut_exclusion_radius = sqrt((spool_strut_tab_outset+thickness/2)*(spool_strut_tab_outset+thickness/2) + (spool_strut_tab_width/2)*(spool_strut_tab_width/2));
 
-m4_axle_hole_diameter = 4.3;    // Slightly closer fit than the standard m4_hole_diameter, since a loose fit here will cause the spool to sit at a slight angle
+m4_axle_hole_diameter = 4.1;    // Slightly closer fit than the standard m4_hole_diameter, since a loose fit here will cause the spool to sit at a slight angle
 
 magnet_diameter = 4;
-magnet_hole_clearance = -0.05;  // interference fit
+magnet_hole_clearance = -0.0;  // interference fit
 magnet_hole_radius = (magnet_diameter + magnet_hole_clearance)/2;
 magnet_hole_offset = (spool_strut_exclusion_radius + flap_pitch_radius)/2;
 
 // Clearance between the motor chassis and the outside right wall of the previous module
 28byj48_chassis_height_clearance = 1.4;
 
-motor_shaft_under_radius = 0.08;  // interference fit
+motor_shaft_under_radius = 0.00;  // interference fit
 motor_slop_radius = 3;
 
 
